@@ -1,0 +1,49 @@
+--- a/drivers/net/ethernet/realtek/r8169_main.c
++++ b/drivers/net/ethernet/realtek/r8169_main.c
+@@ -17,6 +17,7 @@
+ #include <linux/delay.h>
+ #include <linux/ethtool.h>
+ #include <linux/phy.h>
++#include <linux/of.h>
+ #include <linux/if_vlan.h>
+ #include <linux/in.h>
+ #include <linux/io.h>
+@@ -182,6 +183,7 @@
+ 	MAR0		= 8,	/* Multicast filter. */
+ 	CounterAddrLow		= 0x10,
+ 	CounterAddrHigh		= 0x14,
++	LEDSel				= 0x18,
+ 	TxDescStartAddrLow	= 0x20,
+ 	TxDescStartAddrHigh	= 0x24,
+ 	TxHDescStartAddrLow	= 0x28,
+@@ -2178,6 +2180,22 @@
+ 	genphy_soft_reset(tp->phydev);
+ }
+ 
++static int rtl8169_led_configuration(struct rtl8169_private *tp)
++{
++	u32 led_data;
++	int ret;
++
++	ret = of_property_read_u32(tp->pci_dev->dev.of_node, "realtek,led-data",
++								&led_data);
++
++	if (ret)
++		return ret;
++	
++	RTL_W16(tp, LEDSel, led_data);
++
++	return 0;
++}
++
+ static void rtl_rar_set(struct rtl8169_private *tp, u8 *addr)
+ {
+ 	rtl_unlock_config_regs(tp);
+@@ -4672,6 +4690,7 @@
+ {
+ 	rtl_pll_power_up(tp);
+ 	rtl8169_init_phy(tp);
++	rtl8169_led_configuration(tp);
+ 	napi_enable(&tp->napi);
+ 	set_bit(RTL_FLAG_TASK_ENABLED, tp->wk.flags);
+ 	rtl_reset_work(tp);
